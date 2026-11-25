@@ -27,13 +27,30 @@
         <input type="time" id="admission-time">
       </div>
 
-      <select id="case-type" class="select-input">
-        <option value="standard">Обычный приём / соматика</option>
-        <option value="Виробнича травма">Виробнича травма</option>
-        <option value="Невиробнича травма">Невиробнича травма</option>
-        <option value="ДТП">ДТП</option>
-        <option value="Кримінальна травма">Кримінальна травма</option>
-      </select>
+      <div class="input-row">
+        <input type="text" id="patient-phone" placeholder="Номер телефона" autocomplete="off">
+        <input type="text" id="patient-work" placeholder="Кем работает / где" autocomplete="off">
+      </div>
+
+      <input type="text" id="patient-address" placeholder="Где проживает (адрес / населённый пункт)" autocomplete="off">
+
+      <div class="input-row">
+        <select id="outcome-select" class="select-input">
+          <option value="">Куда пошел (не указано)</option>
+          <option value="Госпитализирован">Госпитализирован</option>
+          <option value="Амбулаторно">Амбулаторно</option>
+          <option value="Другое">Другое (уточнить в заметке)</option>
+        </select>
+
+        <select id="case-type" class="select-input">
+          <option value="standard">Обычный приём / соматика</option>
+          <option value="Виробнича травма">Виробнича травма</option>
+          <option value="Невиробнича травма">Невиробнича травма</option>
+          <option value="ДТП">ДТП</option>
+          <option value="ДТН">ДТН</option>
+          <option value="Кримінальна травма">Кримінальна травма</option>
+        </select>
+      </div>
 
       <div id="trauma-fields" class="trauma-box hidden">
         <div class="input-row">
@@ -42,6 +59,18 @@
         </div>
         <input type="text" id="trauma-what" placeholder="Обстоятельства: что случилось, как получена..." autocomplete="off">
         <input type="text" id="journal-ref" placeholder="Журнал травм / № записи (если уже внесено)" autocomplete="off">
+
+        <div class="sampling-box">
+          <div class="sampling-title">Алкоголь и воздух (проба / забор)</div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="sample-taken">
+            <span>Алкоголь и воздух набраны</span>
+          </label>
+          <div class="input-row">
+            <input type="text" id="sample-number" placeholder="Какой номер (№ пробы / акта)" autocomplete="off">
+            <input type="text" id="sample-time" placeholder="Во сколько набрана (напр. 23:10)" autocomplete="off">
+          </div>
+        </div>
 
         <div id="police-fields" class="police-box hidden">
           <div class="police-title">Передача в 102</div>
