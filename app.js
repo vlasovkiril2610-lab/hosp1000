@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const RED_CATEGORIES = ["Криминал", "ДТП"];
   const AMBER_CATEGORIES = ["Виробнича травма", "Невиробнича травма"];
-  const ALL_CATEGORIES = [...RED_CATEGORIES, ...AMBER_CATEGORIES];
+  const TRAUMA_OR_CASE_CATEGORIES = [...RED_CATEGORIES, ...AMBER_CATEGORIES];
+  const ALL_CATEGORIES = ["Болезнь (напр. ГМІ)", ...TRAUMA_OR_CASE_CATEGORIES];
 
   let patients = [];
   try {
@@ -95,9 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.toggle('active', btn.dataset.cat === selectedCategory);
       });
     }
-    const isCase = ALL_CATEGORIES.includes(selectedCategory);
+    const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(selectedCategory);
     const isPolice = RED_CATEGORIES.includes(selectedCategory);
-    if (caseDetailsBox) caseDetailsBox.classList.toggle('hidden', !isCase);
+    if (caseDetailsBox) caseDetailsBox.classList.toggle('hidden', !isTraumaCase);
     if (police102Box) police102Box.classList.toggle('hidden', !isPolice);
   }
 
@@ -213,9 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!hasEcg || !hasBlood || !hasVitals || !hasOutcome) return true;
 
-    const isCase = ALL_CATEGORIES.includes(p.category);
+    const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(p.category);
     const isPolice = RED_CATEGORIES.includes(p.category);
-    if (isCase && !(p.caseDetails && (p.caseDetails.sampleTaken || p.caseDetails.sampleNumber))) {
+    if (isTraumaCase && !(p.caseDetails && (p.caseDetails.sampleTaken || p.caseDetails.sampleNumber))) {
       return true;
     }
     if (isPolice && !(p.police102 && (p.police102.time || p.police102.who))) {
@@ -232,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const isCase = ALL_CATEGORIES.includes(selectedCategory);
+      const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(selectedCategory);
       const isPolice = RED_CATEGORIES.includes(selectedCategory);
 
       const newPatient = {
@@ -249,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         diagnosis: diagnosisInput ? diagnosisInput.value.trim() : '',
         specialist: specialistInput ? specialistInput.value.trim() : '',
         category: selectedCategory,
-        caseDetails: isCase ? {
+        caseDetails: isTraumaCase ? {
           time: caseTimeInput ? caseTimeInput.value.trim() : '',
           place: casePlaceInput ? casePlaceInput.value.trim() : '',
           what: caseWhatInput ? caseWhatInput.value.trim() : '',
@@ -276,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       patients.unshift(newPatient);
 
-      // Сброс формы
       if (nameInput) nameInput.value = '';
       if (dobInput) dobInput.value = '';
       if (addressInput) addressInput.value = '';
@@ -313,7 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Быстрое добавление нового замера показателей в историю карточки
   window.addVitalRecord = (patientId) => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return;
@@ -336,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     save();
   };
 
-  // Быстрый тоггл ЭКГ прямо на карточке
   window.toggleCardEcg = (patientId) => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return;
@@ -365,6 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
     patient.specialist = (document.getElementById(`ed-spec-${patientId}`)?.value || '').trim();
     patient.diagnosis = (document.getElementById(`ed-diag-${patientId}`)?.value || '').trim();
 
+    const edCatEl = document.getElementById(`ed-cat-${patientId}`);
+    if (edCatEl) {
+      patient.category = edCatEl.value;
+    }
+
     const wStatus = document.getElementById(`ed-wstatus-${patientId}`)?.value || 'unknown';
     patient.work = {
       status: wStatus,
@@ -382,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     patient.actions.ecg = Boolean(document.getElementById(`ed-ecg-${patientId}`)?.checked);
     patient.actions.bloodExtra = (document.getElementById(`ed-blood-extra-${patientId}`)?.value || '').trim();
 
-    if (ALL_CATEGORIES.includes(patient.category) || patient.caseDetails) {
+    if (TRAUMA_OR_CASE_CATEGORIES.includes(patient.category) || patient.caseDetails) {
       patient.caseDetails = {
         time: (document.getElementById(`ed-ctime-${patientId}`)?.value || '').trim(),
         place: (document.getElementById(`ed-cplace-${patientId}`)?.value || '').trim(),
@@ -522,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cat = p.category || '';
       const isPolice = RED_CATEGORIES.includes(cat);
       const isAmber = AMBER_CATEGORIES.includes(cat);
-      const isCase = ALL_CATEGORIES.includes(cat) || Boolean(p.caseDetails);
+      const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(cat) || Boolean(p.caseDetails);
       const isEditing = editingPatientId === p.id;
       const photos = Array.isArray(p.photos) ? p.photos : [];
       const vitals = Array.isArray(p.vitalsHistory) ? p.vitalsHistory : [];
@@ -532,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const pol = p.police102 || {};
 
       const badges = [];
-      if (cat) badges.push(`<span class="badge ${isPolice ? 'police' : ''}">${escapeHtml(cat)}</span>`);
+      if (cat) badges.push(`<span class="badge ${isPolice ? 'police' : 'outcome'}">${escapeHtml(cat)}</span>`);
       if (out.type) {
         const outLabel = out.type === 'Госпитализация' && out.department
           ? `Госпитализация: ${out.department}`
@@ -552,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${p.specialist ? `<div><b>К кому привезли:</b> ${escapeHtml(p.specialist)}</div>` : ''}
           ${p.diagnosis ? `<div><b>Диагноз:</b> ${escapeHtml(p.diagnosis)}</div>` : ''}
           ${bloodText ? `<div><b>Кровь:</b> ${escapeHtml(bloodText)}</div>` : ''}
-          ${isCase ? `
+          ${isTraumaCase ? `
             ${cd.time ? `<div><b>Время случая:</b> ${escapeHtml(cd.time)}</div>` : ''}
             ${cd.place ? `<div><b>Где произошло:</b> ${escapeHtml(cd.place)}</div>` : ''}
             ${cd.what ? `<div><b>Обстоятельства / журнал:</b> ${escapeHtml(cd.what)}</div>` : ''}
@@ -607,6 +610,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" id="ed-spec-${p.id}" value="${escapeHtml(p.specialist || '')}" placeholder="К кому привезли">
           </div>
           <input type="text" id="ed-address-${p.id}" value="${escapeHtml(p.address || '')}" placeholder="Место жительства">
+          <select id="ed-cat-${p.id}" class="select-input">
+            <option value="" ${!cat ? 'selected' : ''}>Категория: не выбрано</option>
+            ${ALL_CATEGORIES.map(c => `<option value="${escapeHtml(c)}" ${cat === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+          </select>
           <div class="input-row">
             <select id="ed-wstatus-${p.id}" class="select-input">
               <option value="unknown" ${(p.work?.status || 'unknown') === 'unknown' ? 'selected' : ''}>Работа: не указано</option>
@@ -633,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" id="ed-odept-${p.id}" value="${escapeHtml(out.department || '')}" placeholder="В какое отделение">
           </div>
 
-          ${isCase ? `
+          ${isTraumaCase ? `
             <div class="input-row">
               <input type="text" id="ed-ctime-${p.id}" value="${escapeHtml(cd.time || '')}" placeholder="Время случая">
               <input type="text" id="ed-cplace-${p.id}" value="${escapeHtml(cd.place || '')}" placeholder="Где произошло">
