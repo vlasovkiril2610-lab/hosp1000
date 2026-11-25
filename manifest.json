@@ -1,6 +1,6 @@
 {
-  "name": "HOSP1000 — Смена",
-  "short_name": "HOSP1000",
+  "name": "Приймальний 24 — Смена",
+  "short_name": "Приймальний 24",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",

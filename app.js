@@ -8,8 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     "Журнал / База (eHealth)"
   ];
 
-  const TRAUMA_TYPES = ["Виробнича травма", "Невиробнича травма", "ДТП", "ДТН", "Кримінальна травма"];
-  const POLICE_TYPES = ["ДТП", "ДТН", "Кримінальна травма"];
+  const TRAUMA_TYPES = ["Виробнича травма", "Невиробнича травма", "ДТП", "Кримінальна травма"];
+  const POLICE_TYPES = ["ДТП", "Кримінальна травма"];
 
   let patients = [];
   try {
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentFilter = 'all';
   let editingPatientId = null;
+  let pendingPhotoDataUrl = '';
 
   const nameInput = document.getElementById('patient-name');
   const timeInput = document.getElementById('admission-time');
@@ -46,6 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const policeWhoInput = document.getElementById('police-who');
 
   const noteInput = document.getElementById('patient-note');
+  const photoInput = document.getElementById('patient-photo');
+  const photoPreviewName = document.getElementById('photo-preview-name');
+  const clearPhotoBtn = document.getElementById('clear-photo-btn');
+  const addPhotoPreview = document.getElementById('add-photo-preview');
+
   const addBtn = document.getElementById('add-btn');
   const listEl = document.getElementById('patients-list');
   const tabAll = document.getElementById('tab-all');
@@ -58,6 +64,62 @@ document.addEventListener('DOMContentLoaded', () => {
     timeInput.value = now.toTimeString().slice(0, 5);
   }
   setCurrentTime();
+
+  function compressImage(file, maxWidth = 720, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resetPhotoForm() {
+    pendingPhotoDataUrl = '';
+    if (photoInput) photoInput.value = '';
+    if (photoPreviewName) photoPreviewName.textContent = 'Фото не выбрано';
+    if (clearPhotoBtn) clearPhotoBtn.classList.add('hidden');
+    if (addPhotoPreview) {
+      addPhotoPreview.src = '';
+      addPhotoPreview.classList.add('hidden');
+    }
+  }
+
+  if (photoInput) {
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files && photoInput.files[0];
+      if (!file) return;
+      try {
+        pendingPhotoDataUrl = await compressImage(file);
+        if (photoPreviewName) photoPreviewName.textContent = file.name;
+        if (clearPhotoBtn) clearPhotoBtn.classList.remove('hidden');
+        if (addPhotoPreview) {
+          addPhotoPreview.src = pendingPhotoDataUrl;
+          addPhotoPreview.classList.remove('hidden');
+        }
+      } catch (e) {
+        alert('Не удалось обработать фото');
+        resetPhotoForm();
+      }
+    });
+  }
+
+  if (clearPhotoBtn) {
+    clearPhotoBtn.addEventListener('click', resetPhotoForm);
+  }
 
   function updateCaseFormVisibility() {
     if (!caseTypeSelect || !traumaFields || !policeFields) return;
@@ -87,8 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function save() {
-    localStorage.setItem('hosp_patients', JSON.stringify(patients));
-    render();
+    try {
+      localStorage.setItem('hosp_patients', JSON.stringify(patients));
+      render();
+    } catch (e) {
+      alert('Память браузера переполнена (возможно, слишком много фото). Удали старые фото или сдай смену.');
+    }
   }
 
   if (addBtn) {
@@ -126,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
           who: policeWhoInput ? policeWhoInput.value.trim() : ''
         } : null,
         note: noteInput ? noteInput.value.trim() : '',
+        photos: pendingPhotoDataUrl ? [pendingPhotoDataUrl] : [],
         tasks: buildTasksForType(caseType)
       };
 
@@ -148,11 +215,45 @@ document.addEventListener('DOMContentLoaded', () => {
       if (policeWhoInput) policeWhoInput.value = '';
       if (caseTypeSelect) caseTypeSelect.value = 'standard';
 
+      resetPhotoForm();
       updateCaseFormVisibility();
       setCurrentTime();
       save();
     });
   }
+
+  window.addCardPhoto = async (patientId, inputEl) => {
+    const file = inputEl && inputEl.files && inputEl.files[0];
+    if (!file) return;
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    try {
+      const dataUrl = await compressImage(file);
+      if (!Array.isArray(patient.photos)) patient.photos = [];
+      patient.photos.push(dataUrl);
+      inputEl.value = '';
+      save();
+    } catch (e) {
+      alert('Не удалось добавить фото');
+    }
+  };
+
+  window.removeCardPhoto = (patientId, photoIndex) => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient || !Array.isArray(patient.photos)) return;
+    patient.photos.splice(photoIndex, 1);
+    save();
+  };
+
+  window.openPhotoFull = (patientId, photoIndex) => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient || !Array.isArray(patient.photos) || !patient.photos[photoIndex]) return;
+    const win = window.open();
+    if (win) {
+      win.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;"><img src="${patient.photos[photoIndex]}" style="max-width:100%;max-height:100vh;"></body>`);
+    }
+  };
 
   window.toggleTask = (patientId, taskIndex) => {
     const patient = patients.find(p => p.id === patientId);
@@ -292,14 +393,15 @@ document.addEventListener('DOMContentLoaded', () => {
     listEl.innerHTML = visibleList.map(p => {
       const tasks = Array.isArray(p.tasks) ? p.tasks : [];
       const allDone = tasks.length > 0 && tasks.every(t => t.done);
-      const caseType = p.caseType || 'standard';
-      const isTrauma = TRAUMA_TYPES.includes(caseType) || Boolean(p.trauma);
-      const isPolice = POLICE_TYPES.includes(caseType) || Boolean(p.police);
+      const rawType = p.caseType === 'ДТН' ? 'ДТП' : (p.caseType || 'standard');
+      const isTrauma = TRAUMA_TYPES.includes(rawType) || Boolean(p.trauma);
+      const isPolice = POLICE_TYPES.includes(rawType) || Boolean(p.police);
       const isEditing = editingPatientId === p.id;
+      const photos = Array.isArray(p.photos) ? p.photos : [];
 
       const badges = [];
-      if (caseType !== 'standard') {
-        badges.push(`<span class="badge ${isPolice ? 'police' : ''}">${escapeHtml(caseType)}</span>`);
+      if (rawType !== 'standard') {
+        badges.push(`<span class="badge ${isPolice ? 'police' : ''}">${escapeHtml(rawType)}</span>`);
       }
       if (p.outcome) {
         badges.push(`<span class="badge outcome">${escapeHtml(p.outcome)}</span>`);
@@ -339,6 +441,17 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
       }
+
+      const photosHtml = photos.length ? `
+        <div class="card-photos">
+          ${photos.map((src, pIdx) => `
+            <div class="card-photo-item">
+              <img src="${src}" alt="Фото" onclick="openPhotoFull(${p.id}, ${pIdx})">
+              <button type="button" class="remove-photo-btn" onclick="removeCardPhoto(${p.id}, ${pIdx})">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
 
       let inlineEditHtml = '';
       if (isEditing) {
@@ -405,6 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${metaHtml}
           ${detailsHtml}
           ${(!isEditing && p.note) ? `<div class="patient-note">${escapeHtml(p.note)}</div>` : ''}
+          ${photosHtml}
           ${inlineEditHtml}
           <div class="tasks-grid">
             ${tasks.map((task, idx) => `
@@ -415,6 +529,10 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="card-actions">
             <button class="small-btn" onclick="startInlineEdit(${p.id})">${isEditing ? '✕ Закрыть' : '✎ Редактировать'}</button>
+            <label class="small-btn" style="cursor:pointer;">
+              📷 Фото
+              <input type="file" accept="image/*" capture="environment" class="hidden" onchange="addCardPhoto(${p.id}, this)">
+            </label>
             <button class="small-btn del" onclick="deletePatient(${p.id})">Удалить</button>
           </div>
         </div>

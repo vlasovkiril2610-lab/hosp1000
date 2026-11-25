@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>HOSP1000 — Учёт смены</title>
+  <title>Приймальний 24 — Учёт смены</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <link rel="stylesheet" href="style.css">
@@ -11,7 +11,7 @@
 <body>
   <header>
     <div class="header-top">
-      <h1>HOSP1000</h1>
+      <h1>Приймальний 24</h1>
       <button id="clear-shift-btn" class="danger-btn">Сдать смену</button>
     </div>
     <div class="tabs">
@@ -47,7 +47,6 @@
           <option value="Виробнича травма">Виробнича травма</option>
           <option value="Невиробнича травма">Невиробнича травма</option>
           <option value="ДТП">ДТП</option>
-          <option value="ДТН">ДТН</option>
           <option value="Кримінальна травма">Кримінальна травма</option>
         </select>
       </div>
@@ -82,6 +81,15 @@
       </div>
 
       <input type="text" id="patient-note" placeholder="Диагноз / назначения / нюансы..." autocomplete="off">
+
+      <div class="photo-upload-row">
+        <label class="photo-btn" for="patient-photo">📷 Добавить фото</label>
+        <input type="file" id="patient-photo" accept="image/*" capture="environment" class="hidden">
+        <span id="photo-preview-name" class="photo-filename">Фото не выбрано</span>
+        <button type="button" id="clear-photo-btn" class="small-btn del hidden">✕</button>
+      </div>
+      <img id="add-photo-preview" class="photo-thumb hidden" alt="Предпросмотр фото">
+
       <button id="add-btn" class="primary-btn">+ Заехал пациент</button>
     </section>
 
