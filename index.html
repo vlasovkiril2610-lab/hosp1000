@@ -22,85 +22,123 @@
 
   <main>
     <section class="add-card">
-      <div class="input-row">
-        <input type="text" id="patient-name" placeholder="Палата / ФИО (напр. 4п Иванов)" autocomplete="off">
-        <input type="time" id="admission-time">
-      </div>
+      <div class="section-heading">I. Карта пациента</div>
+
+      <input type="text" id="patient-name" placeholder="1. ФИО (напр. Иванов Иван Иванович)" autocomplete="off">
 
       <div class="input-row">
-        <input type="text" id="vital-bp" placeholder="АД (напр. 120/80)" autocomplete="off">
-        <input type="text" id="vital-hr" placeholder="Пульс (напр. 76)" autocomplete="off">
+        <input type="text" id="patient-dob" placeholder="2. Дата рождения (напр. 14.05.1990)" autocomplete="off">
+        <input type="time" id="admission-time" title="7. Во сколько заехал">
       </div>
 
-      <div class="input-row">
-        <input type="text" id="vital-spo2" placeholder="Сатурация % (напр. 98)" autocomplete="off">
-        <input type="text" id="vital-temp" placeholder="Температура (напр. 36.6)" autocomplete="off">
-      </div>
+      <input type="text" id="patient-address" placeholder="3. Место жительства" autocomplete="off">
 
-      <div class="input-row">
-        <input type="text" id="patient-phone" placeholder="Номер телефона" autocomplete="off">
-        <input type="text" id="patient-work" placeholder="Кем работает / где" autocomplete="off">
-      </div>
-
-      <input type="text" id="patient-address" placeholder="Где проживает (адрес / населённый пункт)" autocomplete="off">
-
-      <div class="input-row">
-        <select id="outcome-select" class="select-input">
-          <option value="">Куда пошел (не указано)</option>
-          <option value="Госпитализирован">Госпитализирован</option>
-          <option value="Амбулаторно">Амбулаторно</option>
-          <option value="Другое">Другое (уточнить в заметке)</option>
-        </select>
-
-        <select id="case-type" class="select-input">
-          <option value="standard">Обычный приём / соматика</option>
-          <option value="Виробнича травма">Виробнича травма</option>
-          <option value="Невиробнича травма">Невиробнича травма</option>
-          <option value="ДТП">ДТП</option>
-          <option value="Кримінальна травма">Кримінальна травма</option>
-        </select>
-      </div>
-
-      <div id="trauma-fields" class="trauma-box hidden">
+      <div class="work-block">
         <div class="input-row">
-          <input type="text" id="trauma-time" placeholder="Во сколько травма (напр. 22:15)" autocomplete="off">
-          <input type="text" id="trauma-place" placeholder="Где произошло (адрес / место)" autocomplete="off">
+          <select id="work-status" class="select-input">
+            <option value="unknown">4. Работает: не указано</option>
+            <option value="no">4. Не работает</option>
+            <option value="yes">4. Работает: Да</option>
+          </select>
+          <input type="text" id="patient-specialist" placeholder="6. К кому привезли (травматолог, невролог...)" autocomplete="off">
         </div>
-        <input type="text" id="trauma-what" placeholder="Обстоятельства: что случилось, как получена..." autocomplete="off">
-        <input type="text" id="journal-ref" placeholder="Журнал травм / № записи (если уже внесено)" autocomplete="off">
+        <div id="work-details-row" class="input-row hidden">
+          <input type="text" id="work-place" placeholder="Где работает" autocomplete="off">
+          <input type="text" id="work-role" placeholder="Кем работает" autocomplete="off">
+        </div>
+      </div>
 
-        <div class="sampling-box">
-          <div class="sampling-title">Алкоголь и воздух (проба / забор)</div>
+      <input type="text" id="patient-diagnosis" placeholder="5. Диагноз" autocomplete="off">
+
+      <div class="section-heading">II. К чему относится</div>
+
+      <div class="category-chips" id="category-chips">
+        <button type="button" class="cat-chip" data-cat="Криминал">1. Криминал</button>
+        <button type="button" class="cat-chip" data-cat="Виробнича травма">2. Виробнича травма</button>
+        <button type="button" class="cat-chip" data-cat="Невиробнича травма">3. Невиробнича травма</button>
+        <button type="button" class="cat-chip" data-cat="ДТП">4. ДТП</button>
+      </div>
+
+      <div id="case-details-box" class="case-box hidden">
+        <div class="input-row">
+          <input type="text" id="case-time" placeholder="Во сколько травма / случай" autocomplete="off">
+          <input type="text" id="case-place" placeholder="Где произошло" autocomplete="off">
+        </div>
+        <input type="text" id="case-what" placeholder="Обстоятельства (что случилось) / журнал" autocomplete="off">
+
+        <div class="sub-box">
+          <div class="sub-title">Алкоголь и воздух (проба)</div>
           <label class="checkbox-row">
             <input type="checkbox" id="sample-taken">
-            <span>Алкоголь и воздух набраны</span>
+            <span>Набран алкоголь и воздух</span>
           </label>
           <div class="input-row">
-            <input type="text" id="sample-number" placeholder="Какой номер (№ пробы / акта)" autocomplete="off">
-            <input type="text" id="sample-time" placeholder="Во сколько набрана (напр. 23:10)" autocomplete="off">
+            <input type="text" id="sample-number" placeholder="Какой номер" autocomplete="off">
+            <input type="text" id="sample-time" placeholder="Во сколько набрана" autocomplete="off">
           </div>
         </div>
 
-        <div id="police-fields" class="police-box hidden">
+        <div id="police-102-box" class="police-box hidden">
           <div class="police-title">Передача в 102</div>
           <div class="input-row">
             <input type="text" id="police-time" placeholder="Во сколько передали" autocomplete="off">
-            <input type="text" id="police-who" placeholder="Кто принял (ФИО / звание / жетон)" autocomplete="off">
+            <input type="text" id="police-who" placeholder="Кто принял" autocomplete="off">
           </div>
         </div>
       </div>
 
-      <input type="text" id="patient-note" placeholder="Диагноз / назначения / нюансы..." autocomplete="off">
+      <div class="section-heading">III. Сделанные действия</div>
+
+      <label class="checkbox-row action-check">
+        <input type="checkbox" id="action-ecg">
+        <span>1. ЭКГ</span>
+      </label>
+
+      <div class="sub-box">
+        <div class="sub-title">2. Кровь</div>
+        <div class="blood-grid">
+          <label class="checkbox-row"><input type="checkbox" class="blood-cb" value="ОАК"><span>ОАК</span></label>
+          <label class="checkbox-row"><input type="checkbox" class="blood-cb" value="БХ"><span>БХ</span></label>
+          <label class="checkbox-row"><input type="checkbox" class="blood-cb" value="Алкоголь"><span>Алкоголь</span></label>
+          <label class="checkbox-row"><input type="checkbox" class="blood-cb" value="Глюкоза"><span>Глюкоза</span></label>
+          <label class="checkbox-row"><input type="checkbox" class="blood-cb" value="ПТИ"><span>ПТИ</span></label>
+        </div>
+        <input type="text" id="blood-extra" placeholder="Другая кровь / № / примечание..." autocomplete="off">
+      </div>
+
+      <div class="sub-box">
+        <div class="sub-title">3. Показатели (первый замер при заезде)</div>
+        <div class="input-row">
+          <input type="text" id="vital-bp" placeholder="Давление (120/80)" autocomplete="off">
+          <input type="text" id="vital-spo2" placeholder="Сатурация %" autocomplete="off">
+        </div>
+        <div class="input-row">
+          <input type="text" id="vital-hr" placeholder="Пульс" autocomplete="off">
+          <input type="text" id="vital-temp" placeholder="Температура" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="sub-box">
+        <div class="sub-title">4. Итог: куда пойдёт</div>
+        <div class="input-row">
+          <select id="outcome-type" class="select-input">
+            <option value="">Не определено</option>
+            <option value="Госпитализация">Госпитализация</option>
+            <option value="Амбулаторно">Амбулаторно</option>
+          </select>
+          <input type="text" id="outcome-dept" class="hidden" placeholder="В какое отделение..." autocomplete="off">
+        </div>
+      </div>
 
       <div class="photo-upload-row">
-        <label class="photo-btn" for="patient-photo">📷 Добавить фото</label>
+        <label class="photo-btn" for="patient-photo">📷 Фото</label>
         <input type="file" id="patient-photo" accept="image/*" capture="environment" class="hidden">
         <span id="photo-preview-name" class="photo-filename">Фото не выбрано</span>
         <button type="button" id="clear-photo-btn" class="small-btn del hidden">✕</button>
       </div>
       <img id="add-photo-preview" class="photo-thumb hidden" alt="Предпросмотр фото">
 
-      <button id="add-btn" class="primary-btn">+ Заехал пациент</button>
+      <button id="add-btn" class="primary-btn">+ Записать заезд</button>
     </section>
 
     <section id="patients-list" class="patients-list"></section>
