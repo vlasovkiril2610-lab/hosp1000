@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const nameInput = document.getElementById('patient-name');
   const timeInput = document.getElementById('admission-time');
+
+  const bpInput = document.getElementById('vital-bp');
+  const hrInput = document.getElementById('vital-hr');
+  const spo2Input = document.getElementById('vital-spo2');
+  const tempInput = document.getElementById('vital-temp');
+
   const phoneInput = document.getElementById('patient-phone');
   const workInput = document.getElementById('patient-work');
   const addressInput = document.getElementById('patient-address');
@@ -173,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
         id: Date.now(),
         name,
         time: (timeInput && timeInput.value) ? timeInput.value : new Date().toTimeString().slice(0, 5),
+        vitals: {
+          bp: bpInput ? bpInput.value.trim() : '',
+          hr: hrInput ? hrInput.value.trim() : '',
+          spo2: spo2Input ? spo2Input.value.trim() : '',
+          temp: tempInput ? tempInput.value.trim() : ''
+        },
         phone: phoneInput ? phoneInput.value.trim() : '',
         address: addressInput ? addressInput.value.trim() : '',
         work: workInput ? workInput.value.trim() : '',
@@ -199,6 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
       patients.unshift(newPatient);
 
       if (nameInput) nameInput.value = '';
+      if (bpInput) bpInput.value = '';
+      if (hrInput) hrInput.value = '';
+      if (spo2Input) spo2Input.value = '';
+      if (tempInput) tempInput.value = '';
       if (phoneInput) phoneInput.value = '';
       if (addressInput) addressInput.value = '';
       if (workInput) workInput.value = '';
@@ -277,6 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return;
 
+    const bpEl = document.getElementById(`edit-bp-${patientId}`);
+    const hrEl = document.getElementById(`edit-hr-${patientId}`);
+    const spo2El = document.getElementById(`edit-spo2-${patientId}`);
+    const tempEl = document.getElementById(`edit-temp-${patientId}`);
+
     const phoneEl = document.getElementById(`edit-phone-${patientId}`);
     const addressEl = document.getElementById(`edit-address-${patientId}`);
     const workEl = document.getElementById(`edit-work-${patientId}`);
@@ -294,6 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const pTimeEl = document.getElementById(`edit-p-time-${patientId}`);
     const pWhoEl = document.getElementById(`edit-p-who-${patientId}`);
+
+    patient.vitals = {
+      bp: bpEl ? bpEl.value.trim() : '',
+      hr: hrEl ? hrEl.value.trim() : '',
+      spo2: spo2El ? spo2El.value.trim() : '',
+      temp: tempEl ? tempEl.value.trim() : ''
+    };
 
     if (phoneEl) patient.phone = phoneEl.value.trim();
     if (addressEl) patient.address = addressEl.value.trim();
@@ -371,6 +399,15 @@ document.addEventListener('DOMContentLoaded', () => {
       .replaceAll('"', '&quot;');
   }
 
+  function formatVitalsLine(v = {}) {
+    const parts = [];
+    if (v.bp) parts.push(`<b>АД:</b> ${escapeHtml(v.bp)}`);
+    if (v.hr) parts.push(`<b>Пульс:</b> ${escapeHtml(v.hr)}`);
+    if (v.spo2) parts.push(`<b>SpO₂:</b> ${escapeHtml(v.spo2)}%`);
+    if (v.temp) parts.push(`<b>t°:</b> ${escapeHtml(v.temp)}°C`);
+    return parts.join(' · ');
+  }
+
   function render() {
     if (!listEl) return;
 
@@ -398,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isPolice = POLICE_TYPES.includes(rawType) || Boolean(p.police);
       const isEditing = editingPatientId === p.id;
       const photos = Array.isArray(p.photos) ? p.photos : [];
+      const v = p.vitals || {};
 
       const badges = [];
       if (rawType !== 'standard') {
@@ -407,6 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
         badges.push(`<span class="badge outcome">${escapeHtml(p.outcome)}</span>`);
       }
       const badgesHtml = badges.length ? `<div class="badges-row">${badges.join('')}</div>` : '';
+
+      const vitalsText = formatVitalsLine(v);
+      const vitalsHtml = (!isEditing && vitalsText) ? `
+        <div class="meta-info">${vitalsText}</div>
+      ` : '';
 
       const metaHtml = (!isEditing && (p.phone || p.address || p.work)) ? `
         <div class="meta-info">
@@ -458,6 +501,14 @@ document.addEventListener('DOMContentLoaded', () => {
         inlineEditHtml = `
           <div class="inline-edit-box">
             <div class="inline-edit-title">Редактирование в карточке</div>
+            <div class="input-row">
+              <input type="text" id="edit-bp-${p.id}" value="${escapeHtml(v.bp || '')}" placeholder="АД (напр. 120/80)" autocomplete="off">
+              <input type="text" id="edit-hr-${p.id}" value="${escapeHtml(v.hr || '')}" placeholder="Пульс" autocomplete="off">
+            </div>
+            <div class="input-row">
+              <input type="text" id="edit-spo2-${p.id}" value="${escapeHtml(v.spo2 || '')}" placeholder="Сатурация %" autocomplete="off">
+              <input type="text" id="edit-temp-${p.id}" value="${escapeHtml(v.temp || '')}" placeholder="Температура" autocomplete="off">
+            </div>
             <div class="input-row">
               <input type="text" id="edit-phone-${p.id}" value="${escapeHtml(p.phone || '')}" placeholder="Номер телефона" autocomplete="off">
               <input type="text" id="edit-work-${p.id}" value="${escapeHtml(p.work || '')}" placeholder="Кем работает" autocomplete="off">
@@ -515,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="patient-time">Заезд: ${escapeHtml(p.time || '')}</div>
           </div>
+          ${vitalsHtml}
           ${metaHtml}
           ${detailsHtml}
           ${(!isEditing && p.note) ? `<div class="patient-note">${escapeHtml(p.note)}</div>` : ''}
