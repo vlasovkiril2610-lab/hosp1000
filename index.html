@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOSP1000 — Учёт смены</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>HOSP1000</h1>
+      <button id="clear-shift-btn" class="danger-btn">Сдать смену</button>
+    </div>
+    <div class="tabs">
+      <button id="tab-all" class="tab active">Все (<span id="count-all">0</span>)</button>
+      <button id="tab-pending" class="tab">Утро: Доделать (<span id="count-pending">0</span>)</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="add-card">
+      <div class="input-row">
+        <input type="text" id="patient-name" placeholder="Палата / ФИО (напр. 4п Иванов)" autocomplete="off">
+        <input type="time" id="admission-time">
+      </div>
+
+      <select id="case-type" class="select-input">
+        <option value="standard">Обычный приём / соматика</option>
+        <option value="Виробнича травма">Виробнича травма</option>
+        <option value="Невиробнича травма">Невиробнича травма</option>
+        <option value="ДТП">ДТП</option>
+        <option value="Кримінальна травма">Кримінальна травма</option>
+      </select>
+
+      <div id="trauma-fields" class="trauma-box hidden">
+        <div class="input-row">
+          <input type="text" id="trauma-time" placeholder="Во сколько травма (напр. 22:15)" autocomplete="off">
+          <input type="text" id="trauma-place" placeholder="Где произошло (адрес / место)" autocomplete="off">
+        </div>
+        <input type="text" id="trauma-what" placeholder="Обстоятельства: что случилось, как получена..." autocomplete="off">
+        <input type="text" id="journal-ref" placeholder="Журнал травм / № записи (если уже внесено)" autocomplete="off">
+
+        <div id="police-fields" class="police-box hidden">
+          <div class="police-title">Передача в 102</div>
+          <div class="input-row">
+            <input type="text" id="police-time" placeholder="Во сколько передали" autocomplete="off">
+            <input type="text" id="police-who" placeholder="Кто принял (ФИО / звание / жетон)" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <input type="text" id="patient-note" placeholder="Диагноз / назначения / нюансы..." autocomplete="off">
+      <button id="add-btn" class="primary-btn">+ Заехал пациент</button>
+    </section>
+
+    <section id="patients-list" class="patients-list"></section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
