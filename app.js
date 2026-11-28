@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const RED_CATEGORIES = ["Криминал", "ДТП"];
-  const AMBER_CATEGORIES = ["Виробнича травма", "Невиробнича травма"];
-  const TRAUMA_OR_CASE_CATEGORIES = [...RED_CATEGORIES, ...AMBER_CATEGORIES];
-  const ALL_CATEGORIES = ["Болезнь (напр. ГМІ)", ...TRAUMA_OR_CASE_CATEGORIES];
+  const BLOOD_OPTIONS = ["ОАК", "БХ", "Алкоголь", "Глюкоза", "ПТИ"];
 
   let patients = [];
   try {
@@ -12,55 +9,27 @@ document.addEventListener('DOMContentLoaded', () => {
     patients = [];
   }
 
-  let currentFilter = 'all';
-  let selectedCategory = '';
-  let editingPatientId = null;
-  let pendingPhotoDataUrl = '';
+  let activeTab = 'new'; // 'new' | 'patients' | 'pending'
+  let selectedReason = '';
+  let expandedPatientId = null;
 
-  // I. Карта пациента
+  // Вкладка 1: Новый заезд
+  const tabNew = document.getElementById('tab-new');
+  const tabPatients = document.getElementById('tab-patients');
+  const tabPending = document.getElementById('tab-pending');
+  const viewNew = document.getElementById('view-new');
+  const viewList = document.getElementById('view-list');
+
   const nameInput = document.getElementById('patient-name');
   const dobInput = document.getElementById('patient-dob');
   const timeInput = document.getElementById('admission-time');
-  const addressInput = document.getElementById('patient-address');
-  const workStatusSelect = document.getElementById('work-status');
-  const workDetailsRow = document.getElementById('work-details-row');
-  const workPlaceInput = document.getElementById('work-place');
-  const workRoleInput = document.getElementById('work-role');
-  const diagnosisInput = document.getElementById('patient-diagnosis');
-  const specialistInput = document.getElementById('patient-specialist');
+  const reasonChipsEl = document.getElementById('reason-chips');
 
-  // II. Категория
-  const categoryChipsEl = document.getElementById('category-chips');
-  const caseDetailsBox = document.getElementById('case-details-box');
-  const caseTimeInput = document.getElementById('case-time');
-  const casePlaceInput = document.getElementById('case-place');
-  const caseWhatInput = document.getElementById('case-what');
-  const sampleTakenInput = document.getElementById('sample-taken');
-  const sampleNumberInput = document.getElementById('sample-number');
-  const sampleTimeInput = document.getElementById('sample-time');
-  const police102Box = document.getElementById('police-102-box');
-  const policeTimeInput = document.getElementById('police-time');
-  const policeWhoInput = document.getElementById('police-who');
-
-  // III. Действия
-  const ecgInput = document.getElementById('action-ecg');
-  const bloodExtraInput = document.getElementById('blood-extra');
   const bpInput = document.getElementById('vital-bp');
-  const spo2Input = document.getElementById('vital-spo2');
   const hrInput = document.getElementById('vital-hr');
+  const spo2Input = document.getElementById('vital-spo2');
   const tempInput = document.getElementById('vital-temp');
-  const outcomeTypeSelect = document.getElementById('outcome-type');
-  const outcomeDeptInput = document.getElementById('outcome-dept');
-
-  // Фото и список
-  const photoInput = document.getElementById('patient-photo');
-  const photoPreviewName = document.getElementById('photo-preview-name');
-  const clearPhotoBtn = document.getElementById('clear-photo-btn');
-  const addPhotoPreview = document.getElementById('add-photo-preview');
   const addBtn = document.getElementById('add-btn');
-  const listEl = document.getElementById('patients-list');
-  const tabAll = document.getElementById('tab-all');
-  const tabPending = document.getElementById('tab-pending');
   const clearShiftBtn = document.getElementById('clear-shift-btn');
 
   function currentTimeStr() {
@@ -72,46 +41,239 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   setAdmissionTimeNow();
 
-  function updateWorkVisibility() {
-    if (!workStatusSelect || !workDetailsRow) return;
-    workDetailsRow.classList.toggle('hidden', workStatusSelect.value !== 'yes');
-  }
-  if (workStatusSelect) {
-    workStatusSelect.addEventListener('change', updateWorkVisibility);
-  }
-  updateWorkVisibility();
-
-  function updateOutcomeVisibility() {
-    if (!outcomeTypeSelect || !outcomeDeptInput) return;
-    outcomeDeptInput.classList.toggle('hidden', outcomeTypeSelect.value !== 'Госпитализация');
-  }
-  if (outcomeTypeSelect) {
-    outcomeTypeSelect.addEventListener('change', updateOutcomeVisibility);
-  }
-  updateOutcomeVisibility();
-
-  function updateCategoryUI() {
-    if (categoryChipsEl) {
-      categoryChipsEl.querySelectorAll('.cat-chip').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.cat === selectedCategory);
-      });
-    }
-    const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(selectedCategory);
-    const isPolice = RED_CATEGORIES.includes(selectedCategory);
-    if (caseDetailsBox) caseDetailsBox.classList.toggle('hidden', !isTraumaCase);
-    if (police102Box) police102Box.classList.toggle('hidden', !isPolice);
-  }
-
-  if (categoryChipsEl) {
-    categoryChipsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('.cat-chip');
-      if (!btn) return;
-      const cat = btn.dataset.cat;
-      selectedCategory = selectedCategory === cat ? '' : cat;
-      updateCategoryUI();
+  function updateReasonChips() {
+    if (!reasonChipsEl) return;
+    reasonChipsEl.querySelectorAll('.reason-chip').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.reason === selectedReason);
     });
   }
-  updateCategoryUI();
+
+  if (reasonChipsEl) {
+    reasonChipsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.reason-chip');
+      if (!btn) return;
+      const reason = btn.dataset.reason;
+      selectedReason = selectedReason === reason ? '' : reason;
+      updateReasonChips();
+    });
+  }
+
+  function switchTab(tabName) {
+    activeTab = tabName;
+    if (tabNew) tabNew.classList.toggle('active', tabName === 'new');
+    if (tabPatients) tabPatients.classList.toggle('active', tabName === 'patients');
+    if (tabPending) tabPending.classList.toggle('active', tabName === 'pending');
+
+    if (viewNew) viewNew.classList.toggle('hidden', tabName !== 'new');
+    if (viewList) viewList.classList.toggle('hidden', tabName === 'new');
+
+    if (tabName !== 'new') {
+      renderList();
+    }
+  }
+
+  if (tabNew) tabNew.addEventListener('click', () => switchTab('new'));
+  if (tabPatients) tabPatients.addEventListener('click', () => switchTab('patients'));
+  if (tabPending) tabPending.addEventListener('click', () => switchTab('pending'));
+
+  function save() {
+    try {
+      localStorage.setItem('hosp_patients', JSON.stringify(patients));
+      updateCounters();
+      if (activeTab !== 'new') {
+        renderList();
+      }
+    } catch (e) {
+      alert('Память браузера переполнена (возможно, много фото). Удали фото или сдай смену.');
+    }
+  }
+
+  function isPatientPending(p) {
+    const hasEcg = Boolean(p.actions && p.actions.ecg);
+    const hasBlood = Boolean(
+      (p.actions && Array.isArray(p.actions.blood) && p.actions.blood.length > 0) ||
+      (p.actions && p.actions.bloodExtra)
+    );
+    const hasVitals = Array.isArray(p.vitalsHistory) && p.vitalsHistory.length > 0;
+    const hasOutcome = Boolean(p.outcome && p.outcome.type);
+
+    if (!hasEcg || !hasBlood || !hasVitals || !hasOutcome) return true;
+
+    const needsCaseDetails = p.reason === 'Травма' || p.reason === 'ДТП';
+    if (needsCaseDetails && !(p.details && (p.details.sampleTaken || p.details.sampleNumber))) {
+      return true;
+    }
+    if (p.reason === 'ДТП' && !(p.police102 && (p.police102.time || p.police102.who))) {
+      return true;
+    }
+    return false;
+  }
+
+  function updateCounters() {
+    const pendingCount = patients.filter(isPatientPending).length;
+    const allEl = document.getElementById('count-all');
+    const pendEl = document.getElementById('count-pending');
+    if (allEl) allEl.textContent = patients.length;
+    if (pendEl) pendEl.textContent = pendingCount;
+  }
+  updateCounters();
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const name = nameInput ? nameInput.value.trim() : '';
+      if (!name) {
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      const admTime = (timeInput && timeInput.value) ? timeInput.value : currentTimeStr();
+      const bp = bpInput ? bpInput.value.trim() : '';
+      const hr = hrInput ? hrInput.value.trim() : '';
+      const spo2 = spo2Input ? spo2Input.value.trim() : '';
+      const temp = tempInput ? tempInput.value.trim() : '';
+
+      const initialVitals = (bp || hr || spo2 || temp)
+        ? [{ time: admTime, bp, hr, spo2, temp }]
+        : [];
+
+      const newPatient = {
+        id: Date.now(),
+        name,
+        dob: dobInput ? dobInput.value.trim() : '',
+        admissionTime: admTime,
+        reason: selectedReason,
+        vitalsHistory: initialVitals,
+        // Всё остальное заполняется в разделе 2 (Пациенты)
+        address: '',
+        workStatus: 'unknown',
+        workPlace: '',
+        workRole: '',
+        diagnosis: '',
+        specialist: '',
+        actions: {
+          ecg: false,
+          blood: [],
+          bloodExtra: '',
+          exams: ''
+        },
+        details: {
+          time: '',
+          place: '',
+          what: '',
+          sampleTaken: false,
+          sampleNumber: '',
+          sampleTime: ''
+        },
+        police102: {
+          time: '',
+          who: ''
+        },
+        outcome: {
+          type: '',
+          department: ''
+        },
+        photos: []
+      };
+
+      patients.unshift(newPatient);
+
+      if (nameInput) nameInput.value = '';
+      if (dobInput) dobInput.value = '';
+      selectedReason = '';
+      updateReasonChips();
+      if (bpInput) bpInput.value = '';
+      if (hrInput) hrInput.value = '';
+      if (spo2Input) spo2Input.value = '';
+      if (tempInput) tempInput.value = '';
+      setAdmissionTimeNow();
+
+      save();
+      switchTab('patients');
+    });
+  }
+
+  window.toggleCardDetails = (patientId) => {
+    expandedPatientId = expandedPatientId === patientId ? null : patientId;
+    renderList();
+  };
+
+  window.toggleCardEcg = (patientId) => {
+    const p = patients.find(item => item.id === patientId);
+    if (!p) return;
+    if (!p.actions) p.actions = { ecg: false, blood: [], bloodExtra: '', exams: '' };
+    p.actions.ecg = !p.actions.ecg;
+    save();
+  };
+
+  window.addVitalRecord = (patientId) => {
+    const p = patients.find(item => item.id === patientId);
+    if (!p) return;
+
+    const bp = (document.getElementById(`nv-bp-${patientId}`)?.value || '').trim();
+    const hr = (document.getElementById(`nv-hr-${patientId}`)?.value || '').trim();
+    const spo2 = (document.getElementById(`nv-spo2-${patientId}`)?.value || '').trim();
+    const temp = (document.getElementById(`nv-temp-${patientId}`)?.value || '').trim();
+
+    if (!bp && !hr && !spo2 && !temp) return;
+
+    if (!Array.isArray(p.vitalsHistory)) p.vitalsHistory = [];
+    p.vitalsHistory.push({
+      time: currentTimeStr(),
+      bp,
+      hr,
+      spo2,
+      temp
+    });
+    save();
+  };
+
+  window.savePatientDetails = (patientId) => {
+    const p = patients.find(item => item.id === patientId);
+    if (!p) return;
+
+    p.name = (document.getElementById(`ed-name-${patientId}`)?.value || '').trim() || p.name;
+    p.dob = (document.getElementById(`ed-dob-${patientId}`)?.value || '').trim();
+    p.reason = document.getElementById(`ed-reason-${patientId}`)?.value || '';
+    p.address = (document.getElementById(`ed-address-${patientId}`)?.value || '').trim();
+    p.workStatus = document.getElementById(`ed-wstatus-${patientId}`)?.value || 'unknown';
+    p.workPlace = (document.getElementById(`ed-wplace-${patientId}`)?.value || '').trim();
+    p.workRole = (document.getElementById(`ed-wrole-${patientId}`)?.value || '').trim();
+    p.specialist = (document.getElementById(`ed-spec-${patientId}`)?.value || '').trim();
+    p.diagnosis = (document.getElementById(`ed-diag-${patientId}`)?.value || '').trim();
+
+    const selectedBlood = Array.from(
+      document.querySelectorAll(`.ed-blood-${patientId}:checked`)
+    ).map(cb => cb.value);
+
+    p.actions = {
+      ecg: Boolean(document.getElementById(`ed-ecg-${patientId}`)?.checked),
+      blood: selectedBlood,
+      bloodExtra: (document.getElementById(`ed-blood-extra-${patientId}`)?.value || '').trim(),
+      exams: (document.getElementById(`ed-exams-${patientId}`)?.value || '').trim()
+    };
+
+    p.details = {
+      time: (document.getElementById(`ed-dtime-${patientId}`)?.value || '').trim(),
+      place: (document.getElementById(`ed-dplace-${patientId}`)?.value || '').trim(),
+      what: (document.getElementById(`ed-dwhat-${patientId}`)?.value || '').trim(),
+      sampleTaken: Boolean(document.getElementById(`ed-staken-${patientId}`)?.checked),
+      sampleNumber: (document.getElementById(`ed-snum-${patientId}`)?.value || '').trim(),
+      sampleTime: (document.getElementById(`ed-stime-${patientId}`)?.value || '').trim()
+    };
+
+    p.police102 = {
+      time: (document.getElementById(`ed-ptime-${patientId}`)?.value || '').trim(),
+      who: (document.getElementById(`ed-pwho-${patientId}`)?.value || '').trim()
+    };
+
+    p.outcome = {
+      type: document.getElementById(`ed-otype-${patientId}`)?.value || '',
+      department: (document.getElementById(`ed-odept-${patientId}`)?.value || '').trim()
+    };
+
+    expandedPatientId = null;
+    save();
+  };
 
   function compressImage(file, maxWidth = 720, quality = 0.72) {
     return new Promise((resolve, reject) => {
@@ -135,287 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function resetPhotoForm() {
-    pendingPhotoDataUrl = '';
-    if (photoInput) photoInput.value = '';
-    if (photoPreviewName) photoPreviewName.textContent = 'Фото не выбрано';
-    if (clearPhotoBtn) clearPhotoBtn.classList.add('hidden');
-    if (addPhotoPreview) {
-      addPhotoPreview.src = '';
-      addPhotoPreview.classList.add('hidden');
-    }
-  }
-
-  if (photoInput) {
-    photoInput.addEventListener('change', async () => {
-      const file = photoInput.files && photoInput.files[0];
-      if (!file) return;
-      try {
-        pendingPhotoDataUrl = await compressImage(file);
-        if (photoPreviewName) photoPreviewName.textContent = file.name;
-        if (clearPhotoBtn) clearPhotoBtn.classList.remove('hidden');
-        if (addPhotoPreview) {
-          addPhotoPreview.src = pendingPhotoDataUrl;
-          addPhotoPreview.classList.remove('hidden');
-        }
-      } catch (e) {
-        alert('Не удалось обработать фото');
-        resetPhotoForm();
-      }
-    });
-  }
-
-  if (clearPhotoBtn) {
-    clearPhotoBtn.addEventListener('click', resetPhotoForm);
-  }
-
-  function save() {
-    try {
-      localStorage.setItem('hosp_patients', JSON.stringify(patients));
-      render();
-    } catch (e) {
-      alert('Память браузера переполнена (возможно, много фото). Удали фото или сдай смену.');
-    }
-  }
-
-  function getSelectedBloodChecks() {
-    return Array.from(document.querySelectorAll('.blood-cb:checked')).map(el => el.value);
-  }
-
-  function clearBloodChecks() {
-    document.querySelectorAll('.blood-cb').forEach(el => {
-      el.checked = false;
-    });
-  }
-
-  function buildInitialVitals() {
-    const bp = bpInput ? bpInput.value.trim() : '';
-    const spo2 = spo2Input ? spo2Input.value.trim() : '';
-    const hr = hrInput ? hrInput.value.trim() : '';
-    const temp = tempInput ? tempInput.value.trim() : '';
-    if (!bp && !spo2 && !hr && !temp) return [];
-    return [{
-      time: (timeInput && timeInput.value) ? timeInput.value : currentTimeStr(),
-      bp,
-      spo2,
-      hr,
-      temp
-    }];
-  }
-
-  function isPatientPending(p) {
-    const hasEcg = Boolean(p.actions && p.actions.ecg);
-    const hasBlood = Boolean(
-      (p.actions && Array.isArray(p.actions.blood) && p.actions.blood.length > 0) ||
-      (p.actions && p.actions.bloodExtra)
-    );
-    const hasVitals = Array.isArray(p.vitalsHistory) && p.vitalsHistory.length > 0;
-    const hasOutcome = Boolean(p.outcome && p.outcome.type);
-
-    if (!hasEcg || !hasBlood || !hasVitals || !hasOutcome) return true;
-
-    const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(p.category);
-    const isPolice = RED_CATEGORIES.includes(p.category);
-    if (isTraumaCase && !(p.caseDetails && (p.caseDetails.sampleTaken || p.caseDetails.sampleNumber))) {
-      return true;
-    }
-    if (isPolice && !(p.police102 && (p.police102.time || p.police102.who))) {
-      return true;
-    }
-    return false;
-  }
-
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      const name = nameInput ? nameInput.value.trim() : '';
-      if (!name) {
-        if (nameInput) nameInput.focus();
-        return;
-      }
-
-      const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(selectedCategory);
-      const isPolice = RED_CATEGORIES.includes(selectedCategory);
-
-      const newPatient = {
-        id: Date.now(),
-        name,
-        dob: dobInput ? dobInput.value.trim() : '',
-        admissionTime: (timeInput && timeInput.value) ? timeInput.value : currentTimeStr(),
-        address: addressInput ? addressInput.value.trim() : '',
-        work: {
-          status: workStatusSelect ? workStatusSelect.value : 'unknown',
-          place: workPlaceInput ? workPlaceInput.value.trim() : '',
-          role: workRoleInput ? workRoleInput.value.trim() : ''
-        },
-        diagnosis: diagnosisInput ? diagnosisInput.value.trim() : '',
-        specialist: specialistInput ? specialistInput.value.trim() : '',
-        category: selectedCategory,
-        caseDetails: isTraumaCase ? {
-          time: caseTimeInput ? caseTimeInput.value.trim() : '',
-          place: casePlaceInput ? casePlaceInput.value.trim() : '',
-          what: caseWhatInput ? caseWhatInput.value.trim() : '',
-          sampleTaken: sampleTakenInput ? Boolean(sampleTakenInput.checked) : false,
-          sampleNumber: sampleNumberInput ? sampleNumberInput.value.trim() : '',
-          sampleTime: sampleTimeInput ? sampleTimeInput.value.trim() : ''
-        } : null,
-        police102: isPolice ? {
-          time: policeTimeInput ? policeTimeInput.value.trim() : '',
-          who: policeWhoInput ? policeWhoInput.value.trim() : ''
-        } : null,
-        actions: {
-          ecg: ecgInput ? Boolean(ecgInput.checked) : false,
-          blood: getSelectedBloodChecks(),
-          bloodExtra: bloodExtraInput ? bloodExtraInput.value.trim() : ''
-        },
-        vitalsHistory: buildInitialVitals(),
-        outcome: {
-          type: outcomeTypeSelect ? outcomeTypeSelect.value : '',
-          department: outcomeDeptInput ? outcomeDeptInput.value.trim() : ''
-        },
-        photos: pendingPhotoDataUrl ? [pendingPhotoDataUrl] : []
-      };
-
-      patients.unshift(newPatient);
-
-      if (nameInput) nameInput.value = '';
-      if (dobInput) dobInput.value = '';
-      if (addressInput) addressInput.value = '';
-      if (workStatusSelect) workStatusSelect.value = 'unknown';
-      if (workPlaceInput) workPlaceInput.value = '';
-      if (workRoleInput) workRoleInput.value = '';
-      if (diagnosisInput) diagnosisInput.value = '';
-      if (specialistInput) specialistInput.value = '';
-      selectedCategory = '';
-      if (caseTimeInput) caseTimeInput.value = '';
-      if (casePlaceInput) casePlaceInput.value = '';
-      if (caseWhatInput) caseWhatInput.value = '';
-      if (sampleTakenInput) sampleTakenInput.checked = false;
-      if (sampleNumberInput) sampleNumberInput.value = '';
-      if (sampleTimeInput) sampleTimeInput.value = '';
-      if (policeTimeInput) policeTimeInput.value = '';
-      if (policeWhoInput) policeWhoInput.value = '';
-      if (ecgInput) ecgInput.checked = false;
-      clearBloodChecks();
-      if (bloodExtraInput) bloodExtraInput.value = '';
-      if (bpInput) bpInput.value = '';
-      if (spo2Input) spo2Input.value = '';
-      if (hrInput) hrInput.value = '';
-      if (tempInput) tempInput.value = '';
-      if (outcomeTypeSelect) outcomeTypeSelect.value = '';
-      if (outcomeDeptInput) outcomeDeptInput.value = '';
-
-      resetPhotoForm();
-      updateWorkVisibility();
-      updateOutcomeVisibility();
-      updateCategoryUI();
-      setAdmissionTimeNow();
-      save();
-    });
-  }
-
-  window.addVitalRecord = (patientId) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient) return;
-
-    const bp = (document.getElementById(`nv-bp-${patientId}`)?.value || '').trim();
-    const spo2 = (document.getElementById(`nv-spo2-${patientId}`)?.value || '').trim();
-    const hr = (document.getElementById(`nv-hr-${patientId}`)?.value || '').trim();
-    const temp = (document.getElementById(`nv-temp-${patientId}`)?.value || '').trim();
-
-    if (!bp && !spo2 && !hr && !temp) return;
-
-    if (!Array.isArray(patient.vitalsHistory)) patient.vitalsHistory = [];
-    patient.vitalsHistory.push({
-      time: currentTimeStr(),
-      bp,
-      spo2,
-      hr,
-      temp
-    });
-    save();
-  };
-
-  window.toggleCardEcg = (patientId) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient) return;
-    if (!patient.actions) patient.actions = { ecg: false, blood: [], bloodExtra: '' };
-    patient.actions.ecg = !patient.actions.ecg;
-    save();
-  };
-
-  window.startInlineEdit = (patientId) => {
-    editingPatientId = editingPatientId === patientId ? null : patientId;
-    render();
-  };
-
-  window.cancelInlineEdit = () => {
-    editingPatientId = null;
-    render();
-  };
-
-  window.saveInlineEdit = (patientId) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient) return;
-
-    patient.name = (document.getElementById(`ed-name-${patientId}`)?.value || '').trim() || patient.name;
-    patient.dob = (document.getElementById(`ed-dob-${patientId}`)?.value || '').trim();
-    patient.address = (document.getElementById(`ed-address-${patientId}`)?.value || '').trim();
-    patient.specialist = (document.getElementById(`ed-spec-${patientId}`)?.value || '').trim();
-    patient.diagnosis = (document.getElementById(`ed-diag-${patientId}`)?.value || '').trim();
-
-    const edCatEl = document.getElementById(`ed-cat-${patientId}`);
-    if (edCatEl) {
-      patient.category = edCatEl.value;
-    }
-
-    const wStatus = document.getElementById(`ed-wstatus-${patientId}`)?.value || 'unknown';
-    patient.work = {
-      status: wStatus,
-      place: (document.getElementById(`ed-wplace-${patientId}`)?.value || '').trim(),
-      role: (document.getElementById(`ed-wrole-${patientId}`)?.value || '').trim()
-    };
-
-    const oType = document.getElementById(`ed-otype-${patientId}`)?.value || '';
-    patient.outcome = {
-      type: oType,
-      department: (document.getElementById(`ed-odept-${patientId}`)?.value || '').trim()
-    };
-
-    if (!patient.actions) patient.actions = { ecg: false, blood: [], bloodExtra: '' };
-    patient.actions.ecg = Boolean(document.getElementById(`ed-ecg-${patientId}`)?.checked);
-    patient.actions.bloodExtra = (document.getElementById(`ed-blood-extra-${patientId}`)?.value || '').trim();
-
-    if (TRAUMA_OR_CASE_CATEGORIES.includes(patient.category) || patient.caseDetails) {
-      patient.caseDetails = {
-        time: (document.getElementById(`ed-ctime-${patientId}`)?.value || '').trim(),
-        place: (document.getElementById(`ed-cplace-${patientId}`)?.value || '').trim(),
-        what: (document.getElementById(`ed-cwhat-${patientId}`)?.value || '').trim(),
-        sampleTaken: Boolean(document.getElementById(`ed-staken-${patientId}`)?.checked),
-        sampleNumber: (document.getElementById(`ed-snum-${patientId}`)?.value || '').trim(),
-        sampleTime: (document.getElementById(`ed-stime-${patientId}`)?.value || '').trim()
-      };
-    }
-
-    if (RED_CATEGORIES.includes(patient.category) || patient.police102) {
-      patient.police102 = {
-        time: (document.getElementById(`ed-ptime-${patientId}`)?.value || '').trim(),
-        who: (document.getElementById(`ed-pwho-${patientId}`)?.value || '').trim()
-      };
-    }
-
-    editingPatientId = null;
-    save();
-  };
-
   window.addCardPhoto = async (patientId, inputEl) => {
     const file = inputEl && inputEl.files && inputEl.files[0];
     if (!file) return;
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient) return;
+    const p = patients.find(item => item.id === patientId);
+    if (!p) return;
     try {
       const dataUrl = await compressImage(file);
-      if (!Array.isArray(patient.photos)) patient.photos = [];
-      patient.photos.push(dataUrl);
+      if (!Array.isArray(p.photos)) p.photos = [];
+      p.photos.push(dataUrl);
       inputEl.value = '';
       save();
     } catch (e) {
@@ -424,25 +314,25 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.removeCardPhoto = (patientId, photoIndex) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient || !Array.isArray(patient.photos)) return;
-    patient.photos.splice(photoIndex, 1);
+    const p = patients.find(item => item.id === patientId);
+    if (!p || !Array.isArray(p.photos)) return;
+    p.photos.splice(photoIndex, 1);
     save();
   };
 
   window.openPhotoFull = (patientId, photoIndex) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient || !Array.isArray(patient.photos) || !patient.photos[photoIndex]) return;
+    const p = patients.find(item => item.id === patientId);
+    if (!p || !Array.isArray(p.photos) || !p.photos[photoIndex]) return;
     const win = window.open();
     if (win) {
-      win.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;"><img src="${patient.photos[photoIndex]}" style="max-width:100%;max-height:100vh;"></body>`);
+      win.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;"><img src="${p.photos[photoIndex]}" style="max-width:100%;max-height:100vh;"></body>`);
     }
   };
 
   window.deletePatient = (patientId) => {
-    if (confirm('Удалить запись?')) {
-      if (editingPatientId === patientId) editingPatientId = null;
-      patients = patients.filter(p => p.id !== patientId);
+    if (confirm('Удалить запись пациента?')) {
+      if (expandedPatientId === patientId) expandedPatientId = null;
+      patients = patients.filter(item => item.id !== patientId);
       save();
     }
   };
@@ -450,29 +340,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (clearShiftBtn) {
     clearShiftBtn.addEventListener('click', () => {
       if (patients.length === 0) return;
-      if (confirm('Сдать смену и удалить всех пациентов?')) {
+      if (confirm('Сдать смену и очистить список всех пациентов?')) {
         patients = [];
-        editingPatientId = null;
+        expandedPatientId = null;
         save();
       }
-    });
-  }
-
-  if (tabAll) {
-    tabAll.addEventListener('click', () => {
-      currentFilter = 'all';
-      tabAll.classList.add('active');
-      if (tabPending) tabPending.classList.remove('active');
-      render();
-    });
-  }
-
-  if (tabPending) {
-    tabPending.addEventListener('click', () => {
-      currentFilter = 'pending';
-      tabPending.classList.add('active');
-      if (tabAll) tabAll.classList.remove('active');
-      render();
     });
   }
 
@@ -484,94 +356,93 @@ document.addEventListener('DOMContentLoaded', () => {
       .replaceAll('"', '&quot;');
   }
 
-  function formatWorkText(w = {}) {
-    if (w.status === 'yes') {
-      const parts = [w.place, w.role].filter(Boolean);
-      return parts.length ? `Работает: ${parts.join(' — ')}` : 'Работает: да';
-    }
-    if (w.status === 'no') return 'Не работает';
-    return '';
-  }
-
   function formatVitalEntry(v = {}) {
     const parts = [];
     if (v.bp) parts.push(`<b>АД:</b> ${escapeHtml(v.bp)}`);
-    if (v.spo2) parts.push(`<b>SpO₂:</b> ${escapeHtml(v.spo2)}%`);
     if (v.hr) parts.push(`<b>Пульс:</b> ${escapeHtml(v.hr)}`);
+    if (v.spo2) parts.push(`<b>SpO₂:</b> ${escapeHtml(v.spo2)}%`);
     if (v.temp) parts.push(`<b>t°:</b> ${escapeHtml(v.temp)}°C`);
     return parts.join(' · ') || '—';
   }
 
-  function render() {
-    if (!listEl) return;
+  function formatWorkSummary(p) {
+    if (p.workStatus === 'yes') {
+      const parts = [p.workPlace, p.workRole].filter(Boolean);
+      return parts.length ? `Работает: ${parts.join(' — ')}` : 'Работает: да';
+    }
+    if (p.workStatus === 'no') return 'Не работает';
+    return '';
+  }
 
-    const pendingPatients = patients.filter(isPatientPending);
-    const countAllEl = document.getElementById('count-all');
-    const countPendingEl = document.getElementById('count-pending');
-    if (countAllEl) countAllEl.textContent = patients.length;
-    if (countPendingEl) countPendingEl.textContent = pendingPatients.length;
+  function renderList() {
+    if (!viewList) return;
 
-    const visibleList = currentFilter === 'all' ? patients : pendingPatients;
+    const list = activeTab === 'pending'
+      ? patients.filter(isPatientPending)
+      : patients;
 
-    if (visibleList.length === 0) {
-      listEl.innerHTML = `<p style="text-align:center; color:#64748b; margin-top:28px;">
-        ${currentFilter === 'all' ? 'Пока заездов нет' : 'Всё закрыто, можно сдавать смену'}
+    if (list.length === 0) {
+      viewList.innerHTML = `<p style="text-align:center; color:#64748b; margin-top:28px;">
+        ${activeTab === 'pending' ? 'Незакрытых задач нет — смена готова!' : 'Пациентов пока нет. Добавь в разделе «Новый заезд».'}
       </p>`;
       return;
     }
 
-    listEl.innerHTML = visibleList.map(p => {
-      const done = !isPatientPending(p);
-      const cat = p.category || '';
-      const isPolice = RED_CATEGORIES.includes(cat);
-      const isAmber = AMBER_CATEGORIES.includes(cat);
-      const isTraumaCase = TRAUMA_OR_CASE_CATEGORIES.includes(cat) || Boolean(p.caseDetails);
-      const isEditing = editingPatientId === p.id;
-      const photos = Array.isArray(p.photos) ? p.photos : [];
-      const vitals = Array.isArray(p.vitalsHistory) ? p.vitalsHistory : [];
-      const acts = p.actions || { ecg: false, blood: [], bloodExtra: '' };
-      const out = p.outcome || { type: '', department: '' };
-      const cd = p.caseDetails || {};
+    viewList.innerHTML = list.map(p => {
+      const pending = isPatientPending(p);
+      const isExpanded = expandedPatientId === p.id;
+      const reason = p.reason || '';
+      const reasonClass = reason === 'ДТП'
+        ? 'reason-dtp'
+        : (reason === 'Травма' ? 'reason-trauma' : (reason === 'Болезнь' ? 'reason-disease' : ''));
+
+      const acts = p.actions || { ecg: false, blood: [], bloodExtra: '', exams: '' };
+      const bloodList = Array.isArray(acts.blood) ? acts.blood : [];
+      const bloodText = [...bloodList, acts.bloodExtra].filter(Boolean).join(', ');
+      const det = p.details || {};
       const pol = p.police102 || {};
+      const out = p.outcome || { type: '', department: '' };
+      const vitals = Array.isArray(p.vitalsHistory) ? p.vitalsHistory : [];
+      const photos = Array.isArray(p.photos) ? p.photos : [];
+      const workStr = formatWorkSummary(p);
 
       const badges = [];
-      if (cat) badges.push(`<span class="badge ${isPolice ? 'police' : 'outcome'}">${escapeHtml(cat)}</span>`);
+      if (reason) {
+        const badgeCls = reason === 'ДТП' ? 'red' : (reason === 'Травма' ? 'amber' : '');
+        badges.push(`<span class="badge ${badgeCls}">${escapeHtml(reason)}</span>`);
+      }
       if (out.type) {
         const outLabel = out.type === 'Госпитализация' && out.department
           ? `Госпитализация: ${out.department}`
           : out.type;
-        badges.push(`<span class="badge outcome">${escapeHtml(outLabel)}</span>`);
+        badges.push(`<span class="badge">${escapeHtml(outLabel)}</span>`);
       }
+      badges.push(`<span class="badge ${pending ? 'amber' : 'ok'}">${pending ? 'К доделке' : 'Закрыто'}</span>`);
 
-      const workStr = formatWorkText(p.work || {});
-      const bloodList = Array.isArray(acts.blood) ? acts.blood : [];
-      const bloodText = [...bloodList, acts.bloodExtra].filter(Boolean).join(', ');
-
-      const infoHtml = !isEditing ? `
+      const summaryHtml = !isExpanded ? `
         <div class="info-block">
           ${p.dob ? `<div><b>Дата рождения:</b> ${escapeHtml(p.dob)}</div>` : ''}
-          ${p.address ? `<div><b>Место жительства:</b> ${escapeHtml(p.address)}</div>` : ''}
+          ${p.address ? `<div><b>Проживает:</b> ${escapeHtml(p.address)}</div>` : ''}
           ${workStr ? `<div><b>${escapeHtml(workStr)}</b></div>` : ''}
           ${p.specialist ? `<div><b>К кому привезли:</b> ${escapeHtml(p.specialist)}</div>` : ''}
           ${p.diagnosis ? `<div><b>Диагноз:</b> ${escapeHtml(p.diagnosis)}</div>` : ''}
           ${bloodText ? `<div><b>Кровь:</b> ${escapeHtml(bloodText)}</div>` : ''}
-          ${isTraumaCase ? `
-            ${cd.time ? `<div><b>Время случая:</b> ${escapeHtml(cd.time)}</div>` : ''}
-            ${cd.place ? `<div><b>Где произошло:</b> ${escapeHtml(cd.place)}</div>` : ''}
-            ${cd.what ? `<div><b>Обстоятельства / журнал:</b> ${escapeHtml(cd.what)}</div>` : ''}
-            ${(cd.sampleTaken || cd.sampleNumber || cd.sampleTime) ? `
-              <div><b>Алкоголь и воздух:</b> ${cd.sampleTaken ? 'набран' : 'не отмечено'} · № ${escapeHtml(cd.sampleNumber || '—')} · в ${escapeHtml(cd.sampleTime || '—')}</div>
+          ${acts.exams ? `<div><b>Обследования:</b> ${escapeHtml(acts.exams)}</div>` : ''}
+          ${(reason === 'Травма' || reason === 'ДТП') && (det.time || det.place || det.what || det.sampleTaken || det.sampleNumber || det.sampleTime) ? `
+            <div><b>Обстоятельства:</b> ${escapeHtml([det.time, det.place, det.what].filter(Boolean).join(' · ') || '—')}</div>
+            ${(det.sampleTaken || det.sampleNumber || det.sampleTime) ? `
+              <div><b>Алкоголь и воздух:</b> ${det.sampleTaken ? 'набран' : 'не отмечено'} · № ${escapeHtml(det.sampleNumber || '—')} · ${escapeHtml(det.sampleTime || '—')}</div>
             ` : ''}
           ` : ''}
-          ${(isPolice || p.police102) ? `
-            <div style="color:#fca5a5;"><b>102:</b> в ${escapeHtml(pol.time || '—')} · принял(а): ${escapeHtml(pol.who || '—')}</div>
+          ${reason === 'ДТП' && (pol.time || pol.who) ? `
+            <div style="color:#fca5a5;"><b>102:</b> ${escapeHtml(pol.time || '—')} · ${escapeHtml(pol.who || '—')}</div>
           ` : ''}
         </div>
       ` : '';
 
-      const vitalsHtml = !isEditing ? `
+      const vitalsHtml = !isExpanded ? `
         <div class="vitals-history">
-          <div class="vitals-history-title">Показатели (история замеров)</div>
+          <div class="vitals-history-title">Показатели (история)</div>
           ${vitals.length ? vitals.map(v => `
             <div class="vital-entry">
               <div>${formatVitalEntry(v)}</div>
@@ -581,122 +452,140 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="add-vital-inline">
             <div class="input-row">
               <input type="text" id="nv-bp-${p.id}" placeholder="АД" autocomplete="off">
-              <input type="text" id="nv-spo2-${p.id}" placeholder="SpO₂ %" autocomplete="off">
               <input type="text" id="nv-hr-${p.id}" placeholder="Пульс" autocomplete="off">
+              <input type="text" id="nv-spo2-${p.id}" placeholder="SpO₂" autocomplete="off">
               <input type="text" id="nv-temp-${p.id}" placeholder="t°" autocomplete="off">
             </div>
-            <button type="button" class="mini-btn" onclick="addVitalRecord(${p.id})">+ Добавить замер сейчас</button>
+            <button type="button" class="mini-btn" onclick="addVitalRecord(${p.id})">+ Добавить замер</button>
           </div>
         </div>
       ` : '';
 
       const photosHtml = photos.length ? `
         <div class="card-photos">
-          ${photos.map((src, pIdx) => `
+          ${photos.map((src, idx) => `
             <div class="card-photo-item">
-              <img src="${src}" alt="Фото" onclick="openPhotoFull(${p.id}, ${pIdx})">
-              <button type="button" class="remove-photo-btn" onclick="removeCardPhoto(${p.id}, ${pIdx})">✕</button>
+              <img src="${src}" alt="Фото" onclick="openPhotoFull(${p.id}, ${idx})">
+              <button type="button" class="remove-photo-btn" onclick="removeCardPhoto(${p.id}, ${idx})">✕</button>
             </div>
           `).join('')}
         </div>
       ` : '';
 
-      const editHtml = isEditing ? `
-        <div class="inline-edit-box">
-          <div class="section-heading">Редактирование карты</div>
-          <input type="text" id="ed-name-${p.id}" value="${escapeHtml(p.name || '')}" placeholder="ФИО">
+      const editorHtml = isExpanded ? `
+        <div class="details-editor">
+          <div class="editor-group-title">Данные и причина</div>
+          <input type="text" id="ed-name-${p.id}" value="${escapeHtml(p.name || '')}" placeholder="ФИО / палата">
           <div class="input-row">
             <input type="text" id="ed-dob-${p.id}" value="${escapeHtml(p.dob || '')}" placeholder="Дата рождения">
-            <input type="text" id="ed-spec-${p.id}" value="${escapeHtml(p.specialist || '')}" placeholder="К кому привезли">
+            <select id="ed-reason-${p.id}" class="select-input">
+              <option value="" ${!reason ? 'selected' : ''}>Причина: не выбрана</option>
+              <option value="Болезнь" ${reason === 'Болезнь' ? 'selected' : ''}>Болезнь</option>
+              <option value="Травма" ${reason === 'Травма' ? 'selected' : ''}>Травма</option>
+              <option value="ДТП" ${reason === 'ДТП' ? 'selected' : ''}>ДТП</option>
+            </select>
           </div>
+
+          <div class="editor-group-title">Карта и маршрутизация</div>
           <input type="text" id="ed-address-${p.id}" value="${escapeHtml(p.address || '')}" placeholder="Место жительства">
-          <select id="ed-cat-${p.id}" class="select-input">
-            <option value="" ${!cat ? 'selected' : ''}>Категория: не выбрано</option>
-            ${ALL_CATEGORIES.map(c => `<option value="${escapeHtml(c)}" ${cat === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
-          </select>
           <div class="input-row">
             <select id="ed-wstatus-${p.id}" class="select-input">
-              <option value="unknown" ${(p.work?.status || 'unknown') === 'unknown' ? 'selected' : ''}>Работа: не указано</option>
-              <option value="no" ${p.work?.status === 'no' ? 'selected' : ''}>Не работает</option>
-              <option value="yes" ${p.work?.status === 'yes' ? 'selected' : ''}>Работает: Да</option>
+              <option value="unknown" ${(p.workStatus || 'unknown') === 'unknown' ? 'selected' : ''}>Работа: не указано</option>
+              <option value="no" ${p.workStatus === 'no' ? 'selected' : ''}>Не работает</option>
+              <option value="yes" ${p.workStatus === 'yes' ? 'selected' : ''}>Работает: Да</option>
             </select>
-            <input type="text" id="ed-wplace-${p.id}" value="${escapeHtml(p.work?.place || '')}" placeholder="Где работает">
-            <input type="text" id="ed-wrole-${p.id}" value="${escapeHtml(p.work?.role || '')}" placeholder="Кем">
+            <input type="text" id="ed-wplace-${p.id}" value="${escapeHtml(p.workPlace || '')}" placeholder="Где работает">
+            <input type="text" id="ed-wrole-${p.id}" value="${escapeHtml(p.workRole || '')}" placeholder="Кем">
           </div>
-          <input type="text" id="ed-diag-${p.id}" value="${escapeHtml(p.diagnosis || '')}" placeholder="Диагноз">
+          <div class="input-row">
+            <input type="text" id="ed-spec-${p.id}" value="${escapeHtml(p.specialist || '')}" placeholder="К кому привезли">
+            <input type="text" id="ed-diag-${p.id}" value="${escapeHtml(p.diagnosis || '')}" placeholder="Диагноз">
+          </div>
 
+          <div class="editor-group-title">Анализы и обследования</div>
           <label class="checkbox-row">
             <input type="checkbox" id="ed-ecg-${p.id}" ${acts.ecg ? 'checked' : ''}>
-            <span>ЭКГ сделано</span>
+            <span>ЭКГ выполнено</span>
           </label>
-          <input type="text" id="ed-blood-extra-${p.id}" value="${escapeHtml(acts.bloodExtra || '')}" placeholder="Кровь / примечание">
+          <div class="blood-grid">
+            ${BLOOD_OPTIONS.map(b => `
+              <label class="checkbox-row">
+                <input type="checkbox" class="ed-blood-${p.id}" value="${b}" ${bloodList.includes(b) ? 'checked' : ''}>
+                <span>${b}</span>
+              </label>
+            `).join('')}
+          </div>
+          <input type="text" id="ed-blood-extra-${p.id}" value="${escapeHtml(acts.bloodExtra || '')}" placeholder="Другая кровь / № / примечание">
+          <input type="text" id="ed-exams-${p.id}" value="${escapeHtml(acts.exams || '')}" placeholder="Обследования (УЗИ, КТ, рентген, консультации)">
 
+          <div class="editor-group-title">Обстоятельства и 102</div>
+          <div class="input-row">
+            <input type="text" id="ed-dtime-${p.id}" value="${escapeHtml(det.time || '')}" placeholder="Время случая">
+            <input type="text" id="ed-dplace-${p.id}" value="${escapeHtml(det.place || '')}" placeholder="Где произошло">
+          </div>
+          <input type="text" id="ed-dwhat-${p.id}" value="${escapeHtml(det.what || '')}" placeholder="Обстоятельства (что случилось)">
+          <label class="checkbox-row">
+            <input type="checkbox" id="ed-staken-${p.id}" ${det.sampleTaken ? 'checked' : ''}>
+            <span>Набран алкоголь и воздух</span>
+          </label>
+          <div class="input-row">
+            <input type="text" id="ed-snum-${p.id}" value="${escapeHtml(det.sampleNumber || '')}" placeholder="Номер пробы">
+            <input type="text" id="ed-stime-${p.id}" value="${escapeHtml(det.sampleTime || '')}" placeholder="Во сколько набрана">
+          </div>
+          <div class="police-box">
+            <div class="police-title">102</div>
+            <div class="input-row">
+              <input type="text" id="ed-ptime-${p.id}" value="${escapeHtml(pol.time || '')}" placeholder="Во сколько передали">
+              <input type="text" id="ed-pwho-${p.id}" value="${escapeHtml(pol.who || '')}" placeholder="Кто принял">
+            </div>
+          </div>
+
+          <div class="editor-group-title">Итог</div>
           <div class="input-row">
             <select id="ed-otype-${p.id}" class="select-input">
-              <option value="" ${!out.type ? 'selected' : ''}>Итог: не определено</option>
+              <option value="" ${!out.type ? 'selected' : ''}>Не определено</option>
               <option value="Госпитализация" ${out.type === 'Госпитализация' ? 'selected' : ''}>Госпитализация</option>
               <option value="Амбулаторно" ${out.type === 'Амбулаторно' ? 'selected' : ''}>Амбулаторно</option>
             </select>
             <input type="text" id="ed-odept-${p.id}" value="${escapeHtml(out.department || '')}" placeholder="В какое отделение">
           </div>
 
-          ${isTraumaCase ? `
-            <div class="input-row">
-              <input type="text" id="ed-ctime-${p.id}" value="${escapeHtml(cd.time || '')}" placeholder="Время случая">
-              <input type="text" id="ed-cplace-${p.id}" value="${escapeHtml(cd.place || '')}" placeholder="Где произошло">
-            </div>
-            <input type="text" id="ed-cwhat-${p.id}" value="${escapeHtml(cd.what || '')}" placeholder="Обстоятельства / журнал">
-            <label class="checkbox-row">
-              <input type="checkbox" id="ed-staken-${p.id}" ${cd.sampleTaken ? 'checked' : ''}>
-              <span>Набран алкоголь и воздух</span>
-            </label>
-            <div class="input-row">
-              <input type="text" id="ed-snum-${p.id}" value="${escapeHtml(cd.sampleNumber || '')}" placeholder="Номер пробы">
-              <input type="text" id="ed-stime-${p.id}" value="${escapeHtml(cd.sampleTime || '')}" placeholder="Во сколько набрана">
-            </div>
-          ` : ''}
-
-          ${(isPolice || p.police102) ? `
-            <div class="input-row">
-              <input type="text" id="ed-ptime-${p.id}" value="${escapeHtml(pol.time || '')}" placeholder="102: во сколько">
-              <input type="text" id="ed-pwho-${p.id}" value="${escapeHtml(pol.who || '')}" placeholder="102: кто принял">
-            </div>
-          ` : ''}
-
-          <div class="inline-edit-actions">
-            <button type="button" class="save-inline-btn" onclick="saveInlineEdit(${p.id})">Сохранить</button>
-            <button type="button" class="cancel-inline-btn" onclick="cancelInlineEdit()">Отмена</button>
+          <div class="editor-actions">
+            <button type="button" class="save-inline-btn" onclick="savePatientDetails(${p.id})">Сохранить</button>
+            <button type="button" class="cancel-inline-btn" onclick="toggleCardDetails(${p.id})">Отмена</button>
           </div>
         </div>
       ` : '';
 
       return `
-        <div class="patient-card ${done ? 'done' : ''} ${isPolice ? 'cat-red' : (isAmber ? 'cat-amber' : '')}">
+        <div class="patient-card ${reasonClass} ${!pending ? 'done' : ''}">
           <div class="card-header">
             <div>
               <div class="patient-title">${escapeHtml(p.name)}</div>
-              ${p.specialist ? `<div class="patient-sub">К кому: ${escapeHtml(p.specialist)}</div>` : ''}
+              <div class="patient-sub">${p.dob ? `ДР: ${escapeHtml(p.dob)}` : 'ДР не указана'}</div>
             </div>
             <div class="patient-time">Заезд: ${escapeHtml(p.admissionTime || '')}</div>
           </div>
 
-          ${badges.length ? `<div class="badges-row">${badges.join('')}</div>` : ''}
-          ${infoHtml}
+          <div class="badges-row">${badges.join('')}</div>
+          ${summaryHtml}
           ${vitalsHtml}
           ${photosHtml}
-          ${editHtml}
+          ${editorHtml}
 
           <div class="tasks-grid">
             <div class="task-chip ${acts.ecg ? 'checked' : ''}" onclick="toggleCardEcg(${p.id})">
               ${acts.ecg ? '✓ ' : ''}ЭКГ
             </div>
-            <div class="task-chip ${bloodText ? 'checked' : ''}" onclick="startInlineEdit(${p.id})">
-              ${bloodText ? '✓ ' : ''}Кровь (${bloodText || 'не указано'})
+            <div class="task-chip ${bloodText || acts.exams ? 'checked' : ''}" onclick="toggleCardDetails(${p.id})">
+              ${bloodText || acts.exams ? '✓ ' : ''}Анализы / обсл.
             </div>
           </div>
 
           <div class="card-actions">
-            <button type="button" class="small-btn" onclick="startInlineEdit(${p.id})">${isEditing ? '✕ Закрыть' : '✎ Редактировать'}</button>
+            <button type="button" class="small-btn" onclick="toggleCardDetails(${p.id})">
+              ${isExpanded ? '✕ Закрыть детали' : '✎ Подробнее / Анализы / 102'}
+            </button>
             <label class="small-btn" style="cursor:pointer;">
               📷 Фото
               <input type="file" accept="image/*" capture="environment" class="hidden" onchange="addCardPhoto(${p.id}, this)">
@@ -707,6 +596,4 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
   }
-
-  render();
 });
