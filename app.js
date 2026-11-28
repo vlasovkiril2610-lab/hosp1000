@@ -9,11 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     patients = [];
   }
 
-  let activeTab = 'new'; // 'new' | 'patients' | 'pending'
+  let activeTab = 'new';
   let selectedReason = '';
   let expandedPatientId = null;
 
-  // Вкладка 1: Новый заезд
   const tabNew = document.getElementById('tab-new');
   const tabPatients = document.getElementById('tab-patients');
   const tabPending = document.getElementById('tab-pending');
@@ -40,6 +39,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (timeInput) timeInput.value = currentTimeStr();
   }
   setAdmissionTimeNow();
+
+  function initSnowfall() {
+    const layer = document.getElementById('snow-layer');
+    if (!layer || layer.childElementCount > 0) return;
+
+    const flakesCount = window.innerWidth < 520 ? 18 : 28;
+    const glyphs = ['❄', '❅', '•'];
+
+    for (let i = 0; i < flakesCount; i++) {
+      const flake = document.createElement('span');
+      flake.className = 'snowflake';
+      flake.textContent = glyphs[i % glyphs.length];
+
+      const left = Math.random() * 100;
+      const duration = 9 + Math.random() * 11;
+      const delay = -(Math.random() * 12);
+      const size = 10 + Math.random() * 10;
+      const opacity = 0.25 + Math.random() * 0.45;
+
+      flake.style.left = `${left}%`;
+      flake.style.fontSize = `${size}px`;
+      flake.style.opacity = String(opacity);
+      flake.style.animationDuration = `${duration}s`;
+      flake.style.animationDelay = `${delay}s`;
+
+      layer.appendChild(flake);
+    }
+  }
+  initSnowfall();
 
   function updateReasonChips() {
     if (!reasonChipsEl) return;
@@ -143,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         admissionTime: admTime,
         reason: selectedReason,
         vitalsHistory: initialVitals,
-        // Всё остальное заполняется в разделе 2 (Пациенты)
         address: '',
         workStatus: 'unknown',
         workPlace: '',

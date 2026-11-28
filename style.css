@@ -25,6 +25,48 @@ body {
   padding-bottom: 48px;
 }
 
+.snow-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+header,
+main {
+  position: relative;
+  z-index: 2;
+}
+
+.snowflake {
+  position: absolute;
+  top: -16px;
+  color: rgba(224, 242, 254, 0.55);
+  user-select: none;
+  animation-name: snowfall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translate3d(0, -16px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(14px, 50vh, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(-10px, 105vh, 0) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snow-layer {
+    display: none;
+  }
+}
+
 header {
   background: var(--card);
   padding: 14px 16px;
@@ -194,7 +236,6 @@ input[type="time"] {
   cursor: pointer;
 }
 
-/* Карточки в разделах Пациенты и Доделать */
 .patient-card {
   background: var(--card);
   border-radius: 12px;
